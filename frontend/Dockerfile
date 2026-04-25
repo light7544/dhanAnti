@@ -1,18 +1,23 @@
-FROM node:20-alpine
+# Stage 1: Build the application
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package configurations
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy application source
 COPY . .
+RUN npm run build
 
-# Expose Vite default port
-EXPOSE 5173
+# Stage 2: Serve the application with Nginx
+FROM nginx:alpine
 
-# Command is handled in docker-compose.yml for development
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Copy the build output from Stage 1 to Nginx's html directory
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy a custom nginx config if needed, or use default
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
